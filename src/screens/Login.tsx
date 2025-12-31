@@ -1,16 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useState } from 'react';
+import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
 import { z } from 'zod';
+import { PrimaryButton } from '../components/PrimaryButton';
+import { TextInputField } from '../components/TextInputField';
 import { useAuthStore } from '../store/authStore';
 import { COLORS, FONT_SIZES, RADIUS, SPACING } from '../styles/theme';
 
@@ -26,7 +26,6 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading, error, setError } = useAuthStore();
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
@@ -62,76 +61,50 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       </View>
 
       <View style={styles.form}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Endereço de Email</Text>
-          <Controller
-            control={control}
-            name="email"
-            render={({ field: { value, onChange } }) => (
-              <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
-                placeholder="seu@email.com"
-                placeholderTextColor={COLORS.textSecondary}
-                value={value}
-                onChangeText={onChange}
-                editable={!isLoading}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            )}
-          />
-          {errors.email && (
-            <Text style={styles.errorText}>{errors.email.message}</Text>
-          )}
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Senha</Text>
-          <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { value, onChange } }) => (
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="••••••••"
-                  placeholderTextColor={COLORS.textSecondary}
-                  value={value}
-                  onChangeText={onChange}
-                  editable={!isLoading}
-                  secureTextEntry={!showPassword}
-                />
-              )}
+        <Controller
+          control={control}
+          name="email"
+          render={({ field: { value, onChange } }) => (
+            <TextInputField
+              label="Endereço de Email"
+              placeholder="seu@email.com"
+              value={value}
+              onChangeText={onChange}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!isLoading}
+              error={errors.email?.message}
             />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              disabled={isLoading}
-            >
-              <Text style={styles.eyeIcon}>
-                {showPassword ? '👁️' : '👁️‍🗨️'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {errors.password && (
-            <Text style={styles.errorText}>{errors.password.message}</Text>
           )}
-        </View>
+        />
+
+        <Controller
+          control={control}
+          name="password"
+          render={({ field: { value, onChange } }) => (
+            <TextInputField
+              label="Senha"
+              placeholder="••••••••"
+              value={value}
+              onChangeText={onChange}
+              isPassword={true}
+              editable={!isLoading}
+              error={errors.password?.message}
+            />
+          )}
+        />
 
         <TouchableOpacity>
           <Text style={styles.forgotPassword}>Esqueceu a Senha?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+        <PrimaryButton
+          label={isLoading ? 'Entrando...' : 'Entrar →'}
           onPress={handleSubmit(onSubmit)}
+          isLoading={isLoading}
           disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color={COLORS.background} size="small" />
-          ) : (
-            <Text style={styles.loginButtonText}>Entrar →</Text>
-          )}
-        </TouchableOpacity>
+          style={styles.loginButton}
+        />
 
         {error && (
           <View style={styles.errorContainer}>
@@ -142,7 +115,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Novo por aqui?{' '}
-          <Text style={styles.createAccountLink}>Crie uma Conta</Text>
+          <Text
+            style={styles.createAccountLink}
+            onPress={() => navigation.navigate('Register')}
+          >
+            Crie uma Conta
+          </Text>
         </Text>
       </View>
     </ScrollView>
@@ -189,70 +167,13 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
     marginBottom: SPACING.xxl,
   },
-  inputGroup: {
-    gap: SPACING.sm,
-  },
-  label: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  input: {
-    backgroundColor: COLORS.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    color: COLORS.text,
-    fontSize: FONT_SIZES.md,
-  },
-  inputError: {
-    borderColor: COLORS.error,
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: FONT_SIZES.sm,
-    marginLeft: SPACING.sm,
-  },
-  passwordInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    color: COLORS.text,
-    fontSize: FONT_SIZES.md,
-  },
-  eyeIcon: {
-    fontSize: 20,
-    padding: SPACING.md,
-  },
   forgotPassword: {
     color: COLORS.primary,
     fontSize: FONT_SIZES.sm,
     textAlign: 'right',
   },
   loginButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
     marginTop: SPACING.lg,
-  },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  loginButtonText: {
-    color: COLORS.background,
-    fontSize: FONT_SIZES.md,
-    fontWeight: 'bold',
   },
   errorContainer: {
     backgroundColor: COLORS.error + '15',

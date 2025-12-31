@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { HomeScreen } from '../screens/Home';
 import { LoginScreen } from '../screens/Login';
+import { RegisterScreen } from '../screens/Register';
 import { useAuthStore } from '../store/authStore';
 import { COLORS } from '../styles/theme';
 
@@ -40,7 +41,10 @@ export const RootNavigator = () => {
         }}
       >
         {!isAuthenticated ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
         ) : (
           <Stack.Screen name="Home" component={HomeScreen} />
         )}

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosInstance } from 'axios';
-import { LoginRequest, LoginResponse } from '../types';
+import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from '../types';
 
 // ✅ IP CONFIGURADO: 10.0.0.188
 // Se precisar alterar, atualize aqui
@@ -69,6 +69,32 @@ export const authService = {
       };
     } catch (error: any) {
       console.log('❌ Erro no login:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        data: error.response?.data,
+      });
+      throw error;
+    }
+  },
+
+  register: async (data: RegisterRequest): Promise<RegisterResponse> => {
+    console.log('📤 Enviando registro para:', API_URL + '/users');
+    console.log('📋 Dados:', { email: data.email, name: data.name, password: '***' });
+    
+    try {
+      const response = await api.post<RegisterResponse>('/users', data);
+      console.log('✅ Registro bem-sucedido!');
+      console.log('📦 Resposta:', response.data);
+      
+      // Atualizar token em cache se existir
+      if (response.data.access_token) {
+        authToken = response.data.access_token;
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.log('❌ Erro no registro:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message,

@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { authService } from '../services/api';
-import { AuthState, LoginRequest } from '../types';
+import { AuthState, LoginRequest, RegisterRequest } from '../types';
 
 interface AuthStore extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   loadStoredAuth: () => Promise<void>;
   setError: (error: string | null) => void;
@@ -134,6 +135,118 @@ export const useAuthStore = create<AuthStore>((set) => ({
       });
     } catch (error) {
       set({ isLoading: false });
+    }
+  },
+
+  register: async (data: RegisterRequest) => {
+    set({ isLoading: true, error: null, isOffline: false });
+    try {
+      const response = await authService.register(data);
+      
+      // Criar objeto user a partir da resposta
+      const user: User = {
+        id: response.id,
+        name: response.name,
+        email: response.email,
+      };
+
+      // Se houver token na resposta, usar diretamente
+      if (response.access_token) {
+        // Calcular expiração (7 dias)
+        const expiresAt = getTokenExpiration();
+
+        // Armazenar dados no AsyncStorage para persistência offline
+        await AsyncStorage.setItem('authToken', response.access_token);
+        await AsyncStorage.setItem('authUser', JSON.stringify(user));
+        await AsyncStorage.setItem('tokenExpiration', expiresAt);
+        
+        // Atualizar token no interceptador
+        authService.setToken(response.access_token);
+
+        set({
+          user,
+          token: response.access_token,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+          isOffline: false,
+        });
+      } else {
+        // Se não houver token, fazer login automático com as mesmas credenciais
+        console.log('🔄 Fazendo login automático após registro...');
+        try {
+          const loginResponse = await authService.login({
+            email: data.email,
+            password: data.password,
+          });
+          
+          const { user: loginUser, access_token: loginToken } = loginResponse;
+          
+          // Calcular expiração (7 dias)
+          const expiresAt = getTokenExpiration();
+          
+          // Armazenar dados
+          await AsyncStorage.setItem('authToken', loginToken);
+          await AsyncStorage.setItem('authUser', JSON.stringify(loginUser));
+          await AsyncStorage.setItem('tokenExpiration', expiresAt);
+          
+          // Atualizar token no interceptador
+          authService.setToken(loginToken);
+          
+          set({
+            user: loginUser,
+            token: loginToken,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+            isOffline: false,
+          });
+        } catch (loginError: any) {
+          // Se o login automático falhar, apenas armazenar usuário e deixar fazer login manual
+          console.log('⚠️ Login automático falhou, usuário precisará fazer login manualmente');
+          await AsyncStorage.setItem('authUser', JSON.stringify(user));
+          
+          set({
+            user,
+            token: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: 'Conta criada! Faça login com suas credenciais.',
+            isOffline: false,
+          });
+          throw loginError;
+        }
+      }
+    } catch (error: any) {
+      let errorMessage = 'Erro ao criar conta. Tente novamente.';
+
+      console.log('❌ Erro de Registro:', {
+        status: error.response?.status,
+        message: error.message,
+        responseData: error.response?.data,
+      });
+
+      if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.message || 'Email ou dados inválidos!';
+      } else if (error.response?.status === 409) {
+        errorMessage = 'Este email já está cadastrado!';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (
+        error.message.includes('Network') ||
+        error.message.includes('timeout') ||
+        error.code === 'ECONNREFUSED'
+      ) {
+        errorMessage = 'Erro de conexão com o servidor.';
+      }
+
+      set({
+        error: errorMessage,
+        isLoading: false,
+        isAuthenticated: false,
+        isOffline: false,
+      });
+      throw error;
     }
   },
 
